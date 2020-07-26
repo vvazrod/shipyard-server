@@ -1,10 +1,5 @@
 import os
+import pymongo
 
-from pymongo import MongoClient
-
-
-db_name = os.getenv('DB_NAME')
-if db_name is None:
-    exit(-1)
-
-client = MongoClient(host='db')[db_name]
+dbhost = os.getenv('DB_HOST', default='localhost')
+db = pymongo.MongoClient(dbhost).shipyard

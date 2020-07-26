@@ -15,7 +15,7 @@ objectid = NewType('objectid', str, ObjectId)
 class Node:
     """A node is a device where tasks can be deployed."""
 
-    _id: Optional[objectid] = field(metadata=dict(required=False))
+    _id: Optional[objectid] = field(metadata={'required': False})
     name: str
     ip: str = field(metadata={'validate': validate_ip})
     cpu: Optional[str] = field(metadata={'required': False})

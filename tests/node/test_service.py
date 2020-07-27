@@ -2,7 +2,6 @@ import unittest
 
 import mongomock
 
-from typing import List
 from unittest import mock
 
 from bson.objectid import ObjectId

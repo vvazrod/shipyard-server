@@ -6,6 +6,7 @@ from marshmallow_dataclass import dataclass, NewType
 
 from shipyard.fields import ObjectId
 from shipyard.validators import validate_devices, validate_ip
+from shipyard.task.model import Task
 
 
 objectid = NewType('objectid', str, ObjectId)
@@ -28,6 +29,9 @@ class Node:
     devices: List[str] = field(default_factory=lambda: [], metadata={
         'required': False,
         'validate': validate_devices
+    })
+    tasks: List[Task] = field(default_factory=lambda: [], metadata={
+        'required': False
     })
 
     Schema: ClassVar[Type[Schema]] = Schema

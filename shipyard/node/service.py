@@ -1,9 +1,13 @@
 from typing import List
 
 from bson.objectid import ObjectId
+from pymongo import ReturnDocument
 
 from shipyard.db import db
+from shipyard.errors import NotFound, NotFeasible
 from shipyard.node.model import Node
+from shipyard.task.model import Task
+from shipyard.crane.feasibility import check_feasibility
 
 
 class NodeService():
@@ -72,3 +76,38 @@ class NodeService():
         if result is None:
             return None
         return Node.Schema().load(result)
+
+    @staticmethod
+    def add_task(node_id: str, task_id: str) -> Node:
+        """
+        Adds a new task to the given node's taskset.
+
+        Returns the updated node with the new task added to its task list.
+
+        If the node or the task can't be found using the given IDs, raises a
+        `NotFound` exception.
+
+        If the new taskset doesn't pass the feasibility check, raises a
+        `NotFeasible` exception.
+        """
+
+        node = db.nodes.find_one({'_id': ObjectId(node_id)})
+        if node is None:
+            raise NotFound('No node found with the given ID')
+        node = Node.Schema().load(node)
+
+        task = db.tasks.find_one({'_id': ObjectId(task_id)})
+        if task is None:
+            raise NotFound('No task found with the given ID')
+        task = Task.Schema().load(task)
+
+        new_taskset = node.tasks + [task]
+        if check_feasibility(new_taskset) is False:
+            raise NotFeasible('The new taskset isn\'t feasible')
+
+        updated_node = db.nodes.find_one_and_update({'_id': ObjectId(node_id)},
+                                                    {'$push': {
+                                                        'tasks': Task.Schema().dump(task)
+                                                    }},
+                                                    return_document=ReturnDocument.AFTER)
+        return Node.Schema().load(updated_node)

@@ -3,6 +3,7 @@ import hug
 from bson.objectid import InvalidId
 from marshmallow import ValidationError
 
+from shipyard.errors import NotFound, NotFeasible
 from shipyard.node.service import NodeService
 from shipyard.node.model import Node
 
@@ -94,3 +95,39 @@ def delete_node(node_id: str, response):
     except InvalidId:
         response.status = hug.HTTP_BAD_REQUEST
         return {'error': 'Invalid ID.'}
+
+
+@hug.post('/{node_id}/tasks')
+def post_node_tasks(node_id: str, response, task_id: str = None):
+    """
+    Add a task to a node using their IDs.
+
+    Returns the updated node's data in the response.
+
+    If no task ID is present in the request or any ID is invalid, returns a 400
+    response.
+
+    If no node or task are found with the given IDs, returns a 404 response.
+
+    If the operation can't be finished, returns a 500 response.
+    """
+
+    if task_id is None:
+        response.status = hug.HTTP_BAD_REQUEST
+        return {'error': 'No task ID was specified in the request'}
+
+    try:
+        result = NodeService.add_task(node_id, task_id)
+        if result is None:
+            response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+            return {'error': 'Unable to add task to node.'}
+        return Node.Schema().dump(result)
+    except InvalidId as e:
+        response.status = hug.HTTP_BAD_REQUEST
+        return {'error': str(e)}
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
+        return {'error': str(e)}
+    except NotFeasible as e:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return {'error': str(e)}

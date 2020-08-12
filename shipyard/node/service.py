@@ -1,3 +1,5 @@
+import gridfs
+
 from typing import List
 
 from bson.objectid import ObjectId
@@ -8,6 +10,10 @@ from shipyard.errors import NotFound, NotFeasible
 from shipyard.node.model import Node
 from shipyard.task.model import Task
 from shipyard.crane.feasibility import check_feasibility
+from shipyard.crane.deploy import deploy_task
+
+
+fs = gridfs.GridFS(db)
 
 
 class NodeService():
@@ -104,6 +110,9 @@ class NodeService():
         new_taskset = node.tasks + [task]
         if check_feasibility(new_taskset) is False:
             raise NotFeasible('The new taskset isn\'t feasible')
+
+        with fs.get(task.file_id) as task_file:
+            deploy_task(task_file, task.name, node)
 
         updated_node = db.nodes.find_one_and_update({'_id': ObjectId(node_id)},
                                                     {'$push': {

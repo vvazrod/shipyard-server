@@ -61,7 +61,7 @@ class TaskService():
         if result is not None:
             raise ValueError('A task already exists with the given name.')
 
-        file_id = fs.put(src_code)
+        file_id = fs.put(src_code, filename=new_task.name)
         new_task.file_id = file_id
 
         new_id = db.tasks.insert_one(Task.Schema(

@@ -6,7 +6,7 @@ from bson.objectid import ObjectId
 from pymongo import ReturnDocument
 
 from shipyard.db import db
-from shipyard.errors import NotFound, NotFeasible
+from shipyard.errors import NotFound, NotFeasible, MissingDevices
 from shipyard.node.model import Node
 from shipyard.task.model import Task
 from shipyard.crane.feasibility import check_feasibility
@@ -93,6 +93,9 @@ class NodeService():
         If the node or the task can't be found using the given IDs, raises a
         `NotFound` exception.
 
+        If the task's needed devices aren't present in the target node, raises a
+        `MissingDevices` exception.
+
         If the new taskset doesn't pass the feasibility check, raises a
         `NotFeasible` exception.
         """
@@ -107,12 +110,16 @@ class NodeService():
             raise NotFound('No task found with the given ID')
         task = Task.Schema().load(task)
 
+        if not set(task.devices).issubset(set(node.devices)):
+            raise MissingDevices(
+                'The target node doesn\'t have the needed devices for the task')
+
         new_taskset = node.tasks + [task]
         if check_feasibility(new_taskset) is False:
             raise NotFeasible('The new taskset isn\'t feasible')
 
         with fs.get(task.file_id) as task_file:
-            deploy_task(task_file, task.name, node)
+            deploy_task(task_file, task, node)
 
         updated_node = db.nodes.find_one_and_update({'_id': ObjectId(node_id)},
                                                     {'$push': {

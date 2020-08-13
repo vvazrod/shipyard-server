@@ -1,10 +1,10 @@
 import paramiko
 
-from shipyard.task.model import Task
 from shipyard.node.model import Node
+from shipyard.node.model import Task
 
 
-def deploy_task(task_file, task_name: str, node: Node):
+def deploy_task(task_file, task: Task, node: Node):
     """
     Sends a task to a certain node and makes it run.
 
@@ -23,13 +23,17 @@ def deploy_task(task_file, task_name: str, node: Node):
 
         with ssh.open_sftp() as sftp:
             sftp.putfo(task_file,
-                       f'/home/{node.ssh_user}/.shipyard/{task_name}.tar.gz')
+                       f'/home/{node.ssh_user}/.shipyard/{task.name}.tar.gz')
 
         ssh.exec_command(
-            f'tar -xzf /home/{node.ssh_user}/.shipyard/{task_name}.tar.gz -C /home/{node.ssh_user}/.shipyard')
+            f'tar -xzf /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz -C /home/{node.ssh_user}/.shipyard')
         ssh.exec_command(
-            f'rm -f /home/{node.ssh_user}/.shipyard/{task_name}.tar.gz')
+            f'rm -f /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz')
         ssh.exec_command(
-            f'docker build -t {task_name} /home/{node.ssh_user}/.shipyard/{task_name}')
+            f'docker build -t {task.name} /home/{node.ssh_user}/.shipyard/{task.name}')
+
+        capabilities = ['--cap-add=sys_nice'] + \
+            [f'--cap-add={cap}' for cap in task.capabilities]
+        devices = [f'--device={dev}' for dev in task.devices]
         ssh.exec_command(
-            f'docker run -d --cap-add=sys_nice --name={task_name} {task_name}')
+            f'docker run -d {" ".join(capabilities)} {" ".join(devices)} --name={task.name} {task.name}')

@@ -3,7 +3,7 @@ import hug
 from bson.objectid import InvalidId
 from marshmallow import ValidationError
 
-from shipyard.errors import NotFound, NotFeasible
+from shipyard.errors import NotFound, NotFeasible, MissingDevices
 from shipyard.node.service import NodeService
 from shipyard.node.model import Node
 
@@ -129,5 +129,8 @@ def post_node_tasks(node_id: str, response, task_id: str = None):
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
     except NotFeasible as e:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return {'error': str(e)}
+    except MissingDevices as e:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
         return {'error': str(e)}

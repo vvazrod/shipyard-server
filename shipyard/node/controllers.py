@@ -120,7 +120,7 @@ def post_node_tasks(node_id: str, response, task_id: str = None):
         result = NodeService.add_task(node_id, task_id)
         if result is None:
             response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-            return {'error': 'Unable to add task to node.'}
+            return {'error': 'Unable to add task to node'}
         return Node.Schema().dump(result)
     except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
@@ -133,4 +133,33 @@ def post_node_tasks(node_id: str, response, task_id: str = None):
         return {'error': str(e)}
     except MissingDevices as e:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return {'error': str(e)}
+
+
+@hug.delete('/{node_id}/tasks/{task_id}')
+def delete_node_tasks(node_id: str, task_id: str, response):
+    """
+    Remove a task from a node's taskset.
+
+    Returns the updated node's data in the response.
+
+    If no task ID is present in the request or any ID is invalid, returns a 400
+    response.
+
+    If no node or task are found with the given IDs, returns a 404 response.
+
+    If the operation can't be finished, returns a 500 response.
+    """
+
+    try:
+        result = NodeService.remove_task(node_id, task_id)
+        if result is None:
+            response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+            return {'error': 'Unable to add task to node'}
+        return Node.Schema().dump(result)
+    except InvalidId as e:
+        response.status = hug.HTTP_BAD_REQUEST
+        return {'error': str(e)}
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}

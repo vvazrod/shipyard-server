@@ -11,6 +11,7 @@ from shipyard.node.model import Node
 from shipyard.task.model import Task
 from shipyard.crane.feasibility import check_feasibility
 from shipyard.crane.deploy import deploy_task
+from shipyard.crane.remove import remove_task
 
 
 fs = gridfs.GridFS(db)
@@ -124,6 +125,36 @@ class NodeService():
         updated_node = db.nodes.find_one_and_update({'_id': ObjectId(node_id)},
                                                     {'$push': {
                                                         'tasks': Task.Schema().dump(task)
+                                                    }},
+                                                    return_document=ReturnDocument.AFTER)
+        return Node.Schema().load(updated_node)
+
+    @staticmethod
+    def remove_task(node_id: str, task_id: str) -> Node:
+        """
+        Removes a task from the given node's taskset.
+
+        Returns the updated node without the task in its taskset.
+
+        If the node or the task can't be found using the given IDs, raises a
+        `NotFound` exception.
+        """
+
+        node = db.nodes.find_one({'_id': ObjectId(node_id)})
+        if node is None:
+            raise NotFound('No node found with the given ID')
+        node = Node.Schema().load(node)
+
+        task = db.tasks.find_one({'_id': ObjectId(task_id)})
+        if task is None:
+            raise NotFound('No task found with the given ID')
+        task = Task.Schema().load(task)
+
+        remove_task(task.name, node)
+
+        updated_node = db.nodes.find_one_and_update({'_id': ObjectId(node_id)},
+                                                    {'$pull': {
+                                                        'tasks': {'_id': ObjectId(task_id)}
                                                     }},
                                                     return_document=ReturnDocument.AFTER)
         return Node.Schema().load(updated_node)

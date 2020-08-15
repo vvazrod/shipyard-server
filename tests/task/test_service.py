@@ -11,6 +11,7 @@ from mongomock.gridfs import enable_gridfs_integration
 from shipyard.task.model import Task
 from shipyard.task.service import TaskService
 
+
 enable_gridfs_integration()
 mockdb = mongomock.MongoClient().shipyard
 mockfs = gridfs.GridFS(mockdb)

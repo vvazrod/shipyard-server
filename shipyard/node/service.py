@@ -71,6 +71,27 @@ class NodeService():
         return str(new_id)
 
     @staticmethod
+    def update(node_id: str, new_values: dict) -> Node:
+        """
+        Updates an existing node.
+
+        The node is retrieved using the given ID and updated with the values
+        specified in the given dictionary. Returns the updated node.
+
+        If no node is found with the given ID, raises a `NotFound` exception.
+        """
+
+        updated_node = db.nodes.find_one_and_update(
+            {'_id': ObjectId(node_id)},
+            {'$set': new_values},
+            return_document=ReturnDocument.AFTER
+        )
+        if updated_node is None:
+            raise NotFound('No node found with the given ID.')
+
+        return Node.Schema().load(updated_node)
+
+    @staticmethod
     def delete(node_id: str) -> Node:
         """
         Removes the node with the given ID from the database.

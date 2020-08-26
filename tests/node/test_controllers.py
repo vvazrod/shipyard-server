@@ -61,6 +61,14 @@ class MockService():
         return str(ObjectId())
 
     @staticmethod
+    def update(node_id: str, new_values: dict) -> Node:
+        for node in test_nodes:
+            if ObjectId(node_id) == node._id:
+                return node
+
+        raise NotFound
+
+    @staticmethod
     def delete(node_id: str) -> Node:
         for node in test_nodes:
             if ObjectId(node_id) == node._id:
@@ -150,6 +158,30 @@ class TestControllers(unittest.TestCase):
 
         response = hug.test.call('GET', controllers, 'error')
         self.assertEqual(response.status, hug.HTTP_BAD_REQUEST)
+        self.assertIsNotNone(response.data)
+        self.assertIsInstance(response.data['error'], str)
+
+    def test_put_node(self):
+        response = hug.test.call('PUT',
+                                 controllers,
+                                 f'{test_nodes[0]._id}',
+                                 body={'name': 'Updated'})
+        self.assertEqual(response.status, hug.HTTP_OK)
+        self.assertIsNotNone(response.data)
+
+        response = hug.test.call('PUT',
+                                 controllers,
+                                 'error',
+                                 body={})
+        self.assertEqual(response.status, hug.HTTP_BAD_REQUEST)
+        self.assertIsNotNone(response.data)
+        self.assertIsInstance(response.data['error'], str)
+
+        response = hug.test.call('PUT',
+                                 controllers,
+                                 f'{ObjectId()}',
+                                 body={})
+        self.assertEqual(response.status, hug.HTTP_NOT_FOUND)
         self.assertIsNotNone(response.data)
         self.assertIsInstance(response.data['error'], str)
 

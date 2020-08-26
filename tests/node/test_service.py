@@ -162,6 +162,18 @@ class TestService(unittest.TestCase):
 
         self.assertEqual(mockdb.nodes.count_documents({}), len(test_nodes)+1)
 
+    def test_update(self):
+        result = NodeService.update(test_nodes[0]._id, {'name': 'Updated'})
+        self.assertNotEqual(result.name, test_nodes[0].name)
+        self.assertEqual(result.name, 'Updated')
+        self.assertEqual(result.ip, test_nodes[0].ip)
+        self.assertEqual(result.ssh_user, test_nodes[0].ssh_user)
+        self.assertEqual(result.ssh_pass, test_nodes[0].ssh_pass)
+        self.assertEqual(result.devices, test_nodes[0].devices)
+
+        with self.assertRaises(NotFound):
+            NodeService.update(str(ObjectId()), {})
+
     def test_delete(self):
         result = NodeService.delete(test_nodes[0]._id)
         self.assertEqual(result.name, test_nodes[0].name)

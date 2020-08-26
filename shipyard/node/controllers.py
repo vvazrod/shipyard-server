@@ -76,6 +76,28 @@ def get_node(node_id: str, response):
         return {'error': 'Invalid ID.'}
 
 
+@hug.put('/{node_id}')
+def put_node(node_id: str, body, response):
+    """
+    Put the values given in the body in a node resource.
+
+    Returns the updated node resource in the response.
+
+    If no node is found, returns a 404 response. If the given ID is invalid,
+    returns a 400 response.
+    """
+
+    try:
+        result = NodeService.update(node_id, body)
+        return Node.Schema().dump(result)
+    except InvalidId:
+        response.status = hug.HTTP_BAD_REQUEST
+        return {'error': 'Invalid ID.'}
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
+        return {'error': str(e)}
+
+
 @hug.delete('/{node_id}')
 def delete_node(node_id: str, response):
     """
@@ -86,6 +108,7 @@ def delete_node(node_id: str, response):
     If no node is found, returns a 404 response. If the given ID is invalid,
     returns a 400 response.
     """
+
     try:
         result = NodeService.delete(node_id)
         if result is None:

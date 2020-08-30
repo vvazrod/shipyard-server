@@ -8,7 +8,7 @@ from io import BytesIO
 
 from bson.objectid import ObjectId
 
-from shipyard.errors import AlreadyPresent
+from shipyard.errors import AlreadyPresent, NotFound
 from shipyard.task import controllers
 from shipyard.task.model import Task
 
@@ -62,6 +62,14 @@ class MockService():
                 raise AlreadyPresent
 
         return str(ObjectId())
+
+    @staticmethod
+    def update(task_id: str, new_values: dict, file_name: str, file_body: BytesIO) -> Task:
+        for task in test_tasks:
+            if ObjectId(task_id) == task._id:
+                return task
+
+        raise NotFound
 
     @staticmethod
     def delete(task_id: str) -> Task:

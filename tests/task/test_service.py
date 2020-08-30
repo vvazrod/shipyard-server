@@ -9,7 +9,7 @@ from io import BytesIO
 from bson.objectid import ObjectId
 from mongomock.gridfs import enable_gridfs_integration
 
-from shipyard.errors import AlreadyPresent
+from shipyard.errors import AlreadyPresent, NotFound
 from shipyard.task.model import Task
 from shipyard.task.service import TaskService
 
@@ -97,6 +97,31 @@ class TestService(unittest.TestCase):
 
         with self.assertRaises(AlreadyPresent):
             TaskService.create(new_task, 'test_file.tar.gz', BytesIO())
+
+    def test_update(self):
+        try:
+            result = TaskService.update(
+                test_tasks[0]._id, {'name': 'Updated'}, None, None)
+            self.assertNotEqual(result.name, test_tasks[0].name)
+            self.assertEqual(result.name, 'Updated')
+            self.assertEqual(result.deadline, test_tasks[0].deadline)
+            self.assertEqual(result.runtime, test_tasks[0].runtime)
+            self.assertEqual(result.period, test_tasks[0].period)
+            self.assertEqual(result.file_id, test_tasks[0].file_id)
+
+            result = TaskService.update(
+                test_tasks[0]._id, {'name': 'Updated'}, 'test_file.tar.gz', BytesIO())
+            self.assertNotEqual(result.name, test_tasks[0].name)
+            self.assertNotEqual(result.file_id, test_tasks[0].file_id)
+            self.assertEqual(result.name, 'Updated')
+            self.assertEqual(result.deadline, test_tasks[0].deadline)
+            self.assertEqual(result.runtime, test_tasks[0].runtime)
+            self.assertEqual(result.period, test_tasks[0].period)
+        except:
+            self.fail()
+
+        with self.assertRaises(NotFound):
+            TaskService.update(ObjectId(), None, None, None)
 
     def test_delete(self):
         result = TaskService.delete(test_tasks[0]._id)

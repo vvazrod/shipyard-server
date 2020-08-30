@@ -90,9 +90,9 @@ def put_node(node_id: str, body, response):
     try:
         result = NodeService.update(node_id, body)
         return Node.Schema().dump(result)
-    except InvalidId:
+    except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
-        return {'error': 'Invalid ID.'}
+        return {'error': str(e)}
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}

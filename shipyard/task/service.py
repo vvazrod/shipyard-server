@@ -4,10 +4,13 @@ from typing import List
 from io import BytesIO
 
 from bson.objectid import ObjectId
+from pymongo import ReturnDocument
 
 from shipyard.db import db
-from shipyard.errors import AlreadyPresent
+from shipyard.errors import AlreadyPresent, NotFound
 from shipyard.task.model import Task
+from shipyard.node.model import Node
+from shipyard.crane.remove import remove_task
 
 
 fs = gridfs.GridFS(db)
@@ -68,6 +71,46 @@ class TaskService():
         new_id = db.tasks.insert_one(Task.Schema(
             exclude=['_id']).dump(new_task)).inserted_id
         return str(new_id)
+
+    @staticmethod
+    def update(task_id: str, new_values: dict, file_name: str, file_body: BytesIO) -> Task:
+        """
+        Updates an existing task.
+
+        The task is retrieved using the given ID and updated with the values
+        specified in the given dictionary. If a new file is also given, it
+        replaces the old one. Returns the updated task.
+
+        If no task is found with the given ID, raises a `NotFound` exception.
+        """
+
+        task = db.tasks.find_one({'_id': ObjectId(task_id)})
+        if task is None:
+            raise NotFound('No task found with the given ID.')
+
+        if file_body:
+            old_file_id = task['file_id']
+            new_file_id = fs.put(file_body, filename=file_name)
+            new_values = {**new_values, 'file_id': new_file_id}
+
+        updated_task = db.tasks.find_one_and_update(
+            {'_id': task['_id']},
+            {'$set': new_values},
+            return_document=ReturnDocument.AFTER
+        )
+
+        if file_body:
+            fs.delete(old_file_id)
+            nodes = db.nodes.find({'tasks._id': task['_id']})
+            if nodes:
+                for node in nodes:
+                    remove_task(task['name'], Node.Schema().load(node))
+                    db.nodes.find_one_and_update(
+                        {'_id': node['_id']},
+                        {'$pull': {'tasks': {'_id': task['_id']}}}
+                    )
+
+        return Task.Schema().load(updated_task)
 
     @staticmethod
     def delete(task_id: str) -> Task:

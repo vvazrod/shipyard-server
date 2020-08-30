@@ -8,7 +8,7 @@ import hug
 from bson.objectid import InvalidId
 from marshmallow import ValidationError
 
-from shipyard.errors import AlreadyPresent
+from shipyard.errors import AlreadyPresent, NotFound
 from shipyard.task.service import TaskService
 from shipyard.task.model import Task
 
@@ -87,6 +87,37 @@ def get_task(task_id: str, response):
     except InvalidId:
         response.status = hug.HTTP_BAD_REQUEST
         return {'error': 'Invalid ID.'}
+
+
+@hug.put('/{task_id}')
+def put_task(task_id: str, body, response):
+    """
+    Put the values given in the body in a task resource.
+
+    Returns the updated task resource in the response.
+
+    If no task is found, returns a 404 response. If the given ID is invalid,
+    returns a 400 response.
+    """
+
+    specs = json.load(body['specs'][1])
+
+    try:
+        result = None
+        if 'file' in body:
+            file_name = body['file'][0]
+            file_body = body['file'][1]
+
+            result = TaskService.update(task_id, specs, file_name, file_body)
+        else:
+            result = TaskService.update(task_id, specs, None, None)
+        return Task.Schema().dump(result)
+    except InvalidId as e:
+        response.status = hug.HTTP_BAD_REQUEST
+        return {'error': str(e)}
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
+        return {'error': str(e)}
 
 
 @hug.delete('/{task_id}')

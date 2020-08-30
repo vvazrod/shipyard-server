@@ -4,10 +4,12 @@ import mongomock
 import gridfs
 
 from unittest import mock
+from io import BytesIO
 
 from bson.objectid import ObjectId
 from mongomock.gridfs import enable_gridfs_integration
 
+from shipyard.errors import AlreadyPresent
 from shipyard.task.model import Task
 from shipyard.task.service import TaskService
 
@@ -75,6 +77,26 @@ class TestService(unittest.TestCase):
 
         result = TaskService.get_by_name('error')
         self.assertIsNone(result)
+
+    def test_create(self):
+        new_task = Task.Schema().load({
+            'name': 'Test',
+            'runtime': 1000,
+            'deadline': 1000,
+            'period': 1000
+        })
+
+        try:
+            result = TaskService.create(
+                new_task, 'test_file.tar.gz', BytesIO())
+            self.assertEqual(mockdb.tasks.count_documents({}),
+                             len(test_tasks)+1)
+            self.assertIsInstance(result, str)
+        except:
+            self.fail()
+
+        with self.assertRaises(AlreadyPresent):
+            TaskService.create(new_task, 'test_file.tar.gz', BytesIO())
 
     def test_delete(self):
         result = TaskService.delete(test_tasks[0]._id)

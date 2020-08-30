@@ -1,11 +1,12 @@
 import gridfs
 
 from typing import List
+from io import BytesIO
 
 from bson.objectid import ObjectId
-from falcon.request_helpers import BoundedStream
 
 from shipyard.db import db
+from shipyard.errors import AlreadyPresent
 from shipyard.task.model import Task
 
 
@@ -48,7 +49,7 @@ class TaskService():
         return Task.Schema().load(result)
 
     @staticmethod
-    def create(new_task: Task, src_code: BoundedStream) -> str:
+    def create(new_task: Task, file_name: str, file_body: BytesIO) -> str:
         """
         Insert a new task into the database.
 
@@ -59,9 +60,9 @@ class TaskService():
 
         result = db.tasks.find_one({'name': new_task.name})
         if result is not None:
-            raise ValueError('A task already exists with the given name.')
+            raise AlreadyPresent('A task already exists with the given name.')
 
-        file_id = fs.put(src_code, filename=new_task.name)
+        file_id = fs.put(file_body, filename=file_name)
         new_task.file_id = file_id
 
         new_id = db.tasks.insert_one(Task.Schema(

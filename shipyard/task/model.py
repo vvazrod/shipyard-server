@@ -25,7 +25,7 @@ class Task:
         'required': False,
         'validate': validate_devices
     })
-    capabilites: List[str] = field(default_factory=lambda: [], metadata={
+    capabilities: List[str] = field(default_factory=lambda: [], metadata={
         'required': False
     })
 

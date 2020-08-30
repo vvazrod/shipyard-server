@@ -4,10 +4,11 @@ import hug
 
 from typing import List
 from unittest import mock
+from io import BytesIO
 
 from bson.objectid import ObjectId
-from falcon.request_helpers import BoundedStream
 
+from shipyard.errors import AlreadyPresent
 from shipyard.task import controllers
 from shipyard.task.model import Task
 
@@ -55,10 +56,10 @@ class MockService():
         return None
 
     @staticmethod
-    def create(new_task: Task, src_code: BoundedStream) -> str:
+    def create(new_task: Task, file_name: str, file_body: BytesIO) -> str:
         for task in test_tasks:
             if new_task.name == task.name:
-                raise ValueError
+                raise AlreadyPresent
 
         return str(ObjectId())
 

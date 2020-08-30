@@ -1,12 +1,14 @@
 import json
 import tarfile
 import io
+import ast
 
 import hug
 
 from bson.objectid import InvalidId
 from marshmallow import ValidationError
 
+from shipyard.errors import AlreadyPresent
 from shipyard.task.service import TaskService
 from shipyard.task.model import Task
 
@@ -36,7 +38,7 @@ def get_task_list(response, name: str = None):
 
 
 @hug.post('/')
-def post_task(request, response):
+def post_task(body, response):
     """
     Create a new task resource.
 
@@ -51,26 +53,20 @@ def post_task(request, response):
     task's specification data isn't correct, returns a 400 response.
     """
 
-    with io.BytesIO(request.stream.read(request.content_length or 0)) as data:
-        with tarfile.open(fileobj=data, mode='r:gz') as tar:
-            files = tar.getmembers()
-            for file in files:
-                if file.name.endswith('specs.json'):
-                    with tar.extractfile(file) as specs_file:
-                        specs = json.load(specs_file)
-                    break
+    file_name = body['file'][0]
+    file_body = body['file'][1]
+    specs = json.load(body['specs'][1])
 
-        data.seek(0)
-        try:
-            new_task = Task.Schema().load(specs)
-            new_id = TaskService.create(new_task, data)
-            return {'_id': new_id}
-        except ValidationError as validation_err:
-            response.status = hug.HTTP_BAD_REQUEST
-            return validation_err.messages
-        except ValueError:
-            response.status = hug.HTTP_CONFLICT
-            return {'error': 'A task already exists with the given name.'}
+    try:
+        new_task = Task.Schema().load(specs)
+        new_id = TaskService.create(new_task, file_name, file_body)
+        return {'_id': new_id}
+    except ValidationError as e:
+        response.status = hug.HTTP_BAD_REQUEST
+        return e.messages
+    except AlreadyPresent as e:
+        response.status = hug.HTTP_CONFLICT
+        return {'error': str(e)}
 
 
 @hug.get('/{task_id}')

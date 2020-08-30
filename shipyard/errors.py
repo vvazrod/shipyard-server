@@ -5,7 +5,7 @@ class NotFound(Exception):
 
 
 class AlreadyPresent(Exception):
-    """Error used when there is an instance of an object already present."""
+    """Error used when there is an instance of an object is already present."""
 
     pass
 

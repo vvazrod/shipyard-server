@@ -29,8 +29,10 @@ def deploy_task(task_file, task: Task, node: Node):
             f'tar -xzf /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz -C /home/{node.ssh_user}/.shipyard')
         ssh.exec_command(
             f'rm -f /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz')
-        ssh.exec_command(
+        _, stdout, _ = ssh.exec_command(
             f'docker build -t {task.name} /home/{node.ssh_user}/.shipyard/{task.name}')
+        while not stdout.channel.exit_status_ready():
+            pass
 
         capabilities = ['--cap-add=sys_nice'] + \
             [f'--cap-add={cap}' for cap in task.capabilities]

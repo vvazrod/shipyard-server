@@ -145,7 +145,11 @@ class NodeService():
 
         updated_node = db.nodes.find_one_and_update({'_id': ObjectId(node_id)},
                                                     {'$push': {
-                                                        'tasks': Task.Schema().dump(task)
+                                                        'tasks': {
+                                                            **Task.Schema().dump(task),
+                                                            '_id': ObjectId(task_id),
+                                                            'file_id': ObjectId(task.file_id)
+                                                        }
                                                     }},
                                                     return_document=ReturnDocument.AFTER)
         return Node.Schema().load(updated_node)

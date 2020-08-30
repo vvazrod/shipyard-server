@@ -16,4 +16,5 @@ def remove_task(task_name: str, node: Node):
         ssh.connect(node.ip, username=node.ssh_user, password=node.ssh_pass)
 
         ssh.exec_command(f'docker rm -f {task_name}')
+        ssh.exec_command(f'docker image rm {task_name}')
         ssh.exec_command(f'rm -rf /home/{node.ssh_user}/.shipyard/{task_name}')

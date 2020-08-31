@@ -3,7 +3,7 @@ import hug
 from bson.objectid import InvalidId
 from marshmallow import ValidationError
 
-from shipyard.errors import NotFound, NotFeasible, MissingDevices
+from shipyard.errors import NotFound, NotFeasible, MissingDevices, AlreadyPresent
 from shipyard.node.service import NodeService
 from shipyard.node.model import Node
 
@@ -21,15 +21,19 @@ def get_node_list(response, name: str = None):
     the system.
     """
 
-    if name is not None:
-        result = NodeService.get_by_name(name)
-        if result is None:
-            response.status = hug.HTTP_NOT_FOUND
-            return {'error': 'Node not found with the given name.'}
-        return Node.Schema().dump(result)
+    try:
+        if name is not None:
+            result = NodeService.get_by_name(name)
+            return Node.Schema().dump(result)
 
-    results = NodeService.get_all()
-    return Node.Schema(only=['_id', 'name', 'ip', 'cpu', 'cpu_arch']).dump(results, many=True)
+        results = NodeService.get_all()
+        return Node.Schema(only=['_id', 'name', 'ip', 'cpu', 'cpu_arch']).dump(results, many=True)
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
+        return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.post('/')
@@ -48,12 +52,15 @@ def post_node(body, response):
         new_node = Node.Schema().load(body)
         new_id = NodeService.create(new_node)
         return {'_id': new_id}
-    except ValidationError as validation_err:
+    except ValidationError as e:
         response.status = hug.HTTP_BAD_REQUEST
-        return validation_err.messages
-    except ValueError:
+        return e.messages
+    except AlreadyPresent as e:
         response.status = hug.HTTP_CONFLICT
-        return {'error': 'A node already exists with the given name.'}
+        return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.get('/{node_id}')
@@ -67,13 +74,16 @@ def get_node(node_id: str, response):
 
     try:
         result = NodeService.get_by_id(node_id)
-        if result is None:
-            response.status = hug.HTTP_NOT_FOUND
-            return {'error': 'Node not found with the given ID.'}
         return Node.Schema().dump(result)
-    except InvalidId:
+    except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
-        return {'error': 'Invalid ID.'}
+        return {'error': str(e)}
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
+        return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.put('/{node_id}')
@@ -96,6 +106,9 @@ def put_node(node_id: str, body, response):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.delete('/{node_id}')
@@ -114,10 +127,16 @@ def delete_node(node_id: str, response):
         if result is None:
             response.status = hug.HTTP_NOT_FOUND
             return {'error': 'Node not found with the given ID.'}
-        return Node.Schema(exclude=['_id']).dump(result)
-    except InvalidId:
+        return Node.Schema(exclude=['_id', 'tasks']).dump(result)
+    except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
-        return {'error': 'Invalid ID.'}
+        return {'error': str(e)}
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
+        return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.post('/{node_id}/tasks')
@@ -157,6 +176,9 @@ def post_node_tasks(node_id: str, response, task_id: str = None):
     except MissingDevices as e:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
         return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.delete('/{node_id}/tasks/{task_id}')
@@ -186,3 +208,6 @@ def delete_node_tasks(node_id: str, task_id: str, response):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return

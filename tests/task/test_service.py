@@ -97,6 +97,7 @@ class TestService(unittest.TestCase):
 
         with self.assertRaises(AlreadyPresent):
             TaskService.create(new_task, 'test_file.tar.gz', BytesIO())
+        self.assertEqual(mockdb.tasks.count_documents({}), len(test_tasks)+1)
 
     def test_update(self):
         try:

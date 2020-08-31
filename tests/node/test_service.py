@@ -9,7 +9,7 @@ from typing import List
 from bson.objectid import ObjectId
 from mongomock.gridfs import enable_gridfs_integration
 
-from shipyard.errors import NotFound, NotFeasible, MissingDevices
+from shipyard.errors import NotFound, NotFeasible, MissingDevices, AlreadyPresent
 from shipyard.node.model import Node
 from shipyard.node.service import NodeService
 from shipyard.task.model import Task
@@ -129,8 +129,8 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.ssh_user, test_nodes[0].ssh_user)
         self.assertEqual(result.ssh_pass, test_nodes[0].ssh_pass)
 
-        result = NodeService.get_by_id(str(ObjectId()))
-        self.assertIsNone(result)
+        with self.assertRaises(NotFound):
+            result = NodeService.get_by_id(str(ObjectId()))
 
     def test_get_by_name(self):
         result = NodeService.get_by_name(test_nodes[0].name)
@@ -139,8 +139,8 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.ssh_user, test_nodes[0].ssh_user)
         self.assertEqual(result.ssh_pass, test_nodes[0].ssh_pass)
 
-        result = NodeService.get_by_name('error')
-        self.assertIsNone(result)
+        with self.assertRaises(NotFound):
+            result = NodeService.get_by_name('error')
 
     def test_create(self):
         new_node = Node.Schema().load({
@@ -151,15 +151,15 @@ class TestService(unittest.TestCase):
         })
 
         try:
-            NodeService.create(new_node)
+            result = NodeService.create(new_node)
             self.assertEqual(mockdb.nodes.count_documents({}),
                              len(test_nodes)+1)
-        except ValueError:
+            self.assertIsInstance(result, str)
+        except:
             self.fail()
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AlreadyPresent):
             NodeService.create(new_node)
-
         self.assertEqual(mockdb.nodes.count_documents({}), len(test_nodes)+1)
 
     def test_update(self):
@@ -182,8 +182,8 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.ssh_pass, test_nodes[0].ssh_pass)
         self.assertEqual(mockdb.nodes.count_documents({}), len(test_nodes)-1)
 
-        result = NodeService.delete(str(ObjectId()))
-        self.assertIsNone(result)
+        with self.assertRaises(NotFound):
+            result = NodeService.delete(str(ObjectId()))
         self.assertEqual(mockdb.nodes.count_documents({}), len(test_nodes)-1)
 
     def test_add_task(self):

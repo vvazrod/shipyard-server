@@ -6,7 +6,7 @@ from bson.objectid import ObjectId
 from pymongo import ReturnDocument
 
 from shipyard.db import db
-from shipyard.errors import NotFound, NotFeasible, MissingDevices
+from shipyard.errors import NotFound, NotFeasible, MissingDevices, AlreadyPresent
 from shipyard.node.model import Node
 from shipyard.task.model import Task
 from shipyard.crane.feasibility import check_feasibility
@@ -31,12 +31,12 @@ class NodeService():
         """
         Fetch a node from the database by its ID.
 
-        Returns `None` if no node is found with the given ID.
+        Raises a `NotFound` error if no node is found with the given ID.
         """
 
         result = db.nodes.find_one({'_id': ObjectId(node_id)})
         if result is None:
-            return None
+            raise NotFound('No node found with the given ID.')
         return Node.Schema().load(result)
 
     @staticmethod
@@ -44,12 +44,12 @@ class NodeService():
         """
         Fetch a node from the database by its name.
 
-        Returns `None` if no node is found with the given name.
+        Raises a `NotFound` error if no node is found with the given name.
         """
 
         result = db.nodes.find_one({'name': node_name})
         if result is None:
-            return None
+            raise NotFound('No node found with the given name.')
         return Node.Schema().load(result)
 
     @staticmethod
@@ -57,14 +57,14 @@ class NodeService():
         """
         Insert a new node into the database.
 
-        If the name of the new node is already in use, this method raises a
-        `ValueError`. If not, the new node is inserted and its new ID is
-        returned.
+        If the name of the new node is already in use, this method raises an
+        `AlreadyPresent` error. If not, the new node is inserted and its new ID
+        is returned.
         """
 
         result = db.nodes.find_one({'name': new_node.name})
         if result is not None:
-            raise ValueError('A node already exists with the given name.')
+            raise AlreadyPresent('A node already exists with the given name.')
 
         new_id = db.nodes.insert_one(Node.Schema(
             exclude=['_id']).dump(new_node)).inserted_id
@@ -108,10 +108,17 @@ class NodeService():
         given ID, this method returns `None`.
         """
 
-        result = db.nodes.find_one_and_delete({'_id': ObjectId(node_id)})
-        if result is None:
-            return None
-        return Node.Schema().load(result)
+        node = db.nodes.find_one({'_id': ObjectId(node_id)})
+        if node is None:
+            raise NotFound('No node found with the given ID.')
+        node = Node.Schema().load(node)
+
+        db.nodes.delete_one({'_id': ObjectId(node_id)})
+
+        for task in node.tasks:
+            remove_task(task.name, node)
+
+        return node
 
     @ staticmethod
     def add_task(node_id: str, task_id: str) -> Node:

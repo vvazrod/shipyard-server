@@ -56,9 +56,9 @@ class TaskService():
         """
         Insert a new task into the database.
 
-        If the name of the new task is already in use, this method raises a
-        `ValueError`. If not, the new task is inserted and its new ID is
-        returned.
+        If the name of the new task is already in use, this method raises an
+        `AlreadyPresent` error. If not, the new task is inserted and its new ID
+        is returned.
         """
 
         result = db.tasks.find_one({'name': new_task.name})

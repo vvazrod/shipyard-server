@@ -7,7 +7,7 @@ from unittest import mock
 
 from bson.objectid import ObjectId
 
-from shipyard.errors import NotFound, NotFeasible, MissingDevices
+from shipyard.errors import NotFound, NotFeasible, MissingDevices, AlreadyPresent
 from shipyard.node import controllers
 from shipyard.node.model import Node
 
@@ -42,7 +42,7 @@ class MockService():
             if ObjectId(node_id) == node._id:
                 return node
 
-        return None
+        raise NotFound
 
     @staticmethod
     def get_by_name(node_name: str) -> Node:
@@ -50,13 +50,13 @@ class MockService():
             if node_name == node.name:
                 return node
 
-        return None
+        raise NotFound
 
     @staticmethod
     def create(new_node: Node) -> str:
         for node in test_nodes:
             if new_node.name == node.name:
-                raise ValueError
+                raise AlreadyPresent
 
         return str(ObjectId())
 
@@ -74,7 +74,7 @@ class MockService():
             if ObjectId(node_id) == node._id:
                 return node
 
-        return None
+        raise NotFound
 
     @staticmethod
     def add_task(node_id: str, task_id: str) -> Node:

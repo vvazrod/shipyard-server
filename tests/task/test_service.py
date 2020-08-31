@@ -65,8 +65,8 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.deadline, test_tasks[0].deadline)
         self.assertEqual(result.period, test_tasks[0].period)
 
-        result = TaskService.get_by_id(str(ObjectId()))
-        self.assertIsNone(result)
+        with self.assertRaises(NotFound):
+            TaskService.get_by_id(str(ObjectId()))
 
     def test_get_by_name(self):
         result = TaskService.get_by_name(test_tasks[0].name)
@@ -75,8 +75,8 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.deadline, test_tasks[0].deadline)
         self.assertEqual(result.period, test_tasks[0].period)
 
-        result = TaskService.get_by_name('error')
-        self.assertIsNone(result)
+        with self.assertRaises(NotFound):
+            TaskService.get_by_name('error')
 
     def test_create(self):
         new_task = Task.Schema().load({
@@ -131,6 +131,6 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.period, test_tasks[0].period)
         self.assertEqual(mockdb.tasks.count_documents({}), len(test_tasks)-1)
 
-        result = TaskService.delete(str(ObjectId()))
-        self.assertIsNone(result)
+        with self.assertRaises(NotFound):
+            TaskService.delete(str(ObjectId()))
         self.assertEqual(mockdb.tasks.count_documents({}), len(test_tasks)-1)

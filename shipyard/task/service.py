@@ -30,12 +30,12 @@ class TaskService():
         """
         Fetch a task from the database by its ID.
 
-        Returns `None` if no task is found with the given ID.
+        Raises a `NotFound` error if no task is found with the given ID.
         """
 
         result = db.tasks.find_one({'_id': ObjectId(task_id)})
         if result is None:
-            return None
+            raise NotFound('No task found with the given ID.')
         return Task.Schema().load(result)
 
     @staticmethod
@@ -43,12 +43,12 @@ class TaskService():
         """
         Fetch a task from the database by its name.
 
-        Returns `None` if no tasks is found with the given name.
+        Raises a `NotFound` error if no task is found with the given name.
         """
 
         result = db.tasks.find_one({'name': task_name})
         if result is None:
-            return None
+            raise NotFound('No task found with the given name.')
         return Task.Schema().load(result)
 
     @staticmethod
@@ -101,11 +101,12 @@ class TaskService():
 
         if file_body:
             fs.delete(old_file_id)
+
         nodes = db.nodes.find({'tasks._id': task['_id']})
         if nodes:
             for node in nodes:
                 remove_task(task['name'], Node.Schema().load(node))
-                db.nodes.find_one_and_update(
+                db.nodes.update_one(
                     {'_id': node['_id']},
                     {'$pull': {'tasks': {'_id': task['_id']}}}
                 )
@@ -118,11 +119,23 @@ class TaskService():
         Removes the task with the given ID from the database.
 
         Returns the task that has been deleted. If no task is found with the
-        given ID, this method returns `None`.
+        given ID, this method raises a `NotFound` error.
         """
 
-        result = db.tasks.find_one_and_delete({'_id': ObjectId(task_id)})
-        if result is None:
-            return None
-        fs.delete(ObjectId(result['file_id']))
-        return Task.Schema().load(result)
+        task = db.tasks.find_one({'_id': ObjectId(task_id)})
+        if task is None:
+            raise NotFound('No task found with the given ID.')
+
+        db.tasks.delete_one({'_id': task['_id']})
+        fs.delete(task['file_id'])
+
+        nodes = db.nodes.find({'tasks._id': task['_id']})
+        if nodes:
+            for node in nodes:
+                remove_task(task['name'], Node.Schema().load(node))
+                db.nodes.find_one_and_update(
+                    {'_id': node['_id']},
+                    {'$pull': {'tasks': {'_id': task['_id']}}}
+                )
+
+        return Task.Schema().load(task)

@@ -26,15 +26,19 @@ def get_task_list(response, name: str = None):
     the system.
     """
 
-    if name is not None:
-        result = TaskService.get_by_name(name)
-        if result is None:
-            response.status = hug.HTTP_NOT_FOUND
-            return {'error': 'Task not found with the given name.'}
-        return Task.Schema().dump(result)
+    try:
+        if name is not None:
+            result = TaskService.get_by_name(name)
+            return Task.Schema().dump(result)
 
-    results = TaskService.get_all()
-    return Task.Schema(only=['_id', 'name', 'runtime', 'deadline', 'period']).dump(results, many=True)
+        results = TaskService.get_all()
+        return Task.Schema(only=['_id', 'name', 'runtime', 'deadline', 'period']).dump(results, many=True)
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
+        return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.post('/')
@@ -67,6 +71,9 @@ def post_task(body, response):
     except AlreadyPresent as e:
         response.status = hug.HTTP_CONFLICT
         return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.get('/{task_id}')
@@ -80,13 +87,16 @@ def get_task(task_id: str, response):
 
     try:
         result = TaskService.get_by_id(task_id)
-        if result is None:
-            response.status = hug.HTTP_NOT_FOUND
-            return {'error': 'Task not found with the given ID.'}
         return Task.Schema().dump(result)
-    except InvalidId:
+    except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
-        return {'error': 'Invalid ID.'}
+        return {'error': str(e)}
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
+        return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.put('/{task_id}')
@@ -103,14 +113,11 @@ def put_task(task_id: str, body, response):
     specs = json.load(body['specs'][1])
 
     try:
-        result = None
+        file_name = file_body = None
         if 'file' in body:
             file_name = body['file'][0]
             file_body = body['file'][1]
-
-            result = TaskService.update(task_id, specs, file_name, file_body)
-        else:
-            result = TaskService.update(task_id, specs, None, None)
+        result = TaskService.update(task_id, specs, file_name, file_body)
         return Task.Schema().dump(result)
     except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
@@ -118,6 +125,9 @@ def put_task(task_id: str, body, response):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return
 
 
 @hug.delete('/{task_id}')
@@ -133,10 +143,13 @@ def delete_task(task_id: str, response):
 
     try:
         result = TaskService.delete(task_id)
-        if result is None:
-            response.status = hug.HTTP_NOT_FOUND
-            return {'error': 'Task not found with the given ID.'}
         return Task.Schema(exclude=['_id', 'file_id']).dump(result)
-    except InvalidId:
+    except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
-        return {'error': 'Invalid ID.'}
+        return {'error': str(e)}
+    except NotFound as e:
+        response.status = hug.HTTP_NOT_FOUND
+        return {'error': str(e)}
+    except:
+        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
+        return

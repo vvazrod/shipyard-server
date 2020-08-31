@@ -45,7 +45,7 @@ class MockService():
             if ObjectId(task_id) == task._id:
                 return task
 
-        return None
+        raise NotFound
 
     @staticmethod
     def get_by_name(task_name: str) -> Task:
@@ -53,7 +53,7 @@ class MockService():
             if task_name == task.name:
                 return task
 
-        return None
+        raise NotFound
 
     @staticmethod
     def create(new_task: Task, file_name: str, file_body: BytesIO) -> str:
@@ -77,7 +77,7 @@ class MockService():
             if ObjectId(task_id) == task._id:
                 return task
 
-        return None
+        raise NotFound
 
 
 @mock.patch('shipyard.task.controllers.TaskService', MockService)

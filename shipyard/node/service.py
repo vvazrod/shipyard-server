@@ -81,17 +81,25 @@ class NodeService():
         If no node is found with the given ID, raises a `NotFound` exception.
         """
 
+        node = db.nodes.find_one({'_id': ObjectId(node_id)})
+        if node is None:
+            raise NotFound('No node found with the given ID.')
+        node = Node.Schema().load(node)
+
+        if any(k in new_values for k in ('devices', 'ssh_user', 'ssh_pass', 'ip')):
+            for task in node.tasks:
+                remove_task(task.name, node)
+            new_values = {**new_values, 'tasks': []}
+
         updated_node = db.nodes.find_one_and_update(
-            {'_id': ObjectId(node_id)},
+            {'_id': node._id},
             {'$set': new_values},
             return_document=ReturnDocument.AFTER
         )
-        if updated_node is None:
-            raise NotFound('No node found with the given ID.')
 
         return Node.Schema().load(updated_node)
 
-    @staticmethod
+    @ staticmethod
     def delete(node_id: str) -> Node:
         """
         Removes the node with the given ID from the database.
@@ -105,7 +113,7 @@ class NodeService():
             return None
         return Node.Schema().load(result)
 
-    @staticmethod
+    @ staticmethod
     def add_task(node_id: str, task_id: str) -> Node:
         """
         Adds a new task to the given node's taskset.
@@ -154,7 +162,7 @@ class NodeService():
                                                     return_document=ReturnDocument.AFTER)
         return Node.Schema().load(updated_node)
 
-    @staticmethod
+    @ staticmethod
     def remove_task(node_id: str, task_id: str) -> Node:
         """
         Removes a task from the given node's taskset.

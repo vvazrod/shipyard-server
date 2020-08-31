@@ -101,14 +101,14 @@ class TaskService():
 
         if file_body:
             fs.delete(old_file_id)
-            nodes = db.nodes.find({'tasks._id': task['_id']})
-            if nodes:
-                for node in nodes:
-                    remove_task(task['name'], Node.Schema().load(node))
-                    db.nodes.find_one_and_update(
-                        {'_id': node['_id']},
-                        {'$pull': {'tasks': {'_id': task['_id']}}}
-                    )
+        nodes = db.nodes.find({'tasks._id': task['_id']})
+        if nodes:
+            for node in nodes:
+                remove_task(task['name'], Node.Schema().load(node))
+                db.nodes.find_one_and_update(
+                    {'_id': node['_id']},
+                    {'$pull': {'tasks': {'_id': task['_id']}}}
+                )
 
         return Task.Schema().load(updated_task)
 

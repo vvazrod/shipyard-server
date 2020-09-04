@@ -27,13 +27,13 @@ def get_node_list(response, name: str = None):
             return Node.Schema().dump(result)
 
         results = NodeService.get_all()
-        return Node.Schema(only=['_id', 'name', 'ip', 'cpu', 'cpu_arch']).dump(results, many=True)
+        return Node.Schema(only=['_id', 'name', 'ip', 'cpu', 'cpu_arch', 'tasks._id', 'tasks.name']).dump(results, many=True)
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to fetch node list.'}
 
 
 @hug.post('/')
@@ -54,13 +54,13 @@ def post_node(body, response):
         return {'_id': new_id}
     except ValidationError as e:
         response.status = hug.HTTP_BAD_REQUEST
-        return e.messages
+        return {'error': e.messages}
     except AlreadyPresent as e:
         response.status = hug.HTTP_CONFLICT
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to create node.'}
 
 
 @hug.get('/{node_id}')
@@ -81,9 +81,9 @@ def get_node(node_id: str, response):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to fetch node.'}
 
 
 @hug.put('/{node_id}')
@@ -100,15 +100,18 @@ def put_node(node_id: str, body, response):
     try:
         result = NodeService.update(node_id, body)
         return Node.Schema().dump(result)
+    except ValidationError as e:
+        response.status = hug.HTTP_BAD_REQUEST
+        return {'error': e.messages}
     except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
         return {'error': str(e)}
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to update node.'}
 
 
 @hug.delete('/{node_id}')
@@ -124,9 +127,6 @@ def delete_node(node_id: str, response):
 
     try:
         result = NodeService.delete(node_id)
-        if result is None:
-            response.status = hug.HTTP_NOT_FOUND
-            return {'error': 'Node not found with the given ID.'}
         return Node.Schema(exclude=['_id', 'tasks']).dump(result)
     except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
@@ -134,9 +134,9 @@ def delete_node(node_id: str, response):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to delete node.'}
 
 
 @hug.post('/{node_id}/tasks')
@@ -162,7 +162,7 @@ def post_node_tasks(node_id: str, response, task_id: str = None):
         result = NodeService.add_task(node_id, task_id)
         if result is None:
             response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-            return {'error': 'Unable to add task to node'}
+            return {'error': 'Unable to add task to node.'}
         return Node.Schema().dump(result)
     except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
@@ -170,15 +170,12 @@ def post_node_tasks(node_id: str, response, task_id: str = None):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except NotFeasible as e:
+    except (NotFeasible, MissingDevices) as e:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
         return {'error': str(e)}
-    except MissingDevices as e:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return {'error': str(e)}
-    except:
-        response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to add task to node.'}
 
 
 @hug.delete('/{node_id}/tasks/{task_id}')
@@ -200,7 +197,7 @@ def delete_node_tasks(node_id: str, task_id: str, response):
         result = NodeService.remove_task(node_id, task_id)
         if result is None:
             response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-            return {'error': 'Unable to add task to node'}
+            return {'error': 'Unable to add task to node.'}
         return Node.Schema().dump(result)
     except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
@@ -208,6 +205,6 @@ def delete_node_tasks(node_id: str, task_id: str, response):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to remove task from node.'}

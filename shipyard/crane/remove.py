@@ -15,6 +15,10 @@ def remove_task(task_name: str, node: Node):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy)
         ssh.connect(node.ip, username=node.ssh_user, password=node.ssh_pass)
 
-        ssh.exec_command(f'docker rm -f {task_name}')
-        ssh.exec_command(f'docker image rm {task_name}')
-        ssh.exec_command(f'rm -rf /home/{node.ssh_user}/.shipyard/{task_name}')
+        _, stdout, _ = ssh.exec_command(
+            f'docker rm -f {task_name} && '
+            f'docker image rm {task_name} && '
+            f'rm -rf /home/{node.ssh_user}/.shipyard/{task_name}'
+        )
+        while not stdout.channel.exit_status_ready():
+            pass

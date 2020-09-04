@@ -36,9 +36,9 @@ def get_task_list(response, name: str = None):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to fetch task list.'}
 
 
 @hug.post('/')
@@ -57,23 +57,26 @@ def post_task(body, response):
     task's specification data isn't correct, returns a 400 response.
     """
 
-    file_name = body['file'][0]
-    file_body = body['file'][1]
-    specs = json.load(body['specs'][1])
-
     try:
+        file_name = body['file'][0]
+        file_body = body['file'][1]
+        specs = json.loads(body['specs'])
+
         new_task = Task.Schema().load(specs)
         new_id = TaskService.create(new_task, file_name, file_body)
         return {'_id': new_id}
+    except json.JSONDecodeError as e:
+        response.status = hug.HTTP_BAD_REQUEST
+        return {'error': e.msg}
     except ValidationError as e:
         response.status = hug.HTTP_BAD_REQUEST
-        return e.messages
+        return {'error': e.messages}
     except AlreadyPresent as e:
         response.status = hug.HTTP_CONFLICT
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to create task.'}
 
 
 @hug.get('/{task_id}')
@@ -94,9 +97,9 @@ def get_task(task_id: str, response):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to fetch task.'}
 
 
 @hug.put('/{task_id}')
@@ -110,24 +113,26 @@ def put_task(task_id: str, body, response):
     returns a 400 response.
     """
 
-    specs = json.load(body['specs'][1])
-
     try:
+        specs = json.loads(body['specs'])
         file_name = file_body = None
         if 'file' in body:
             file_name = body['file'][0]
             file_body = body['file'][1]
         result = TaskService.update(task_id, specs, file_name, file_body)
         return Task.Schema().dump(result)
+    except json.JSONDecodeError as e:
+        response.status = hug.HTTP_BAD_REQUEST
+        return {'error': e.msg}
     except InvalidId as e:
         response.status = hug.HTTP_BAD_REQUEST
         return {'error': str(e)}
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to update task.'}
 
 
 @hug.delete('/{task_id}')
@@ -150,6 +155,6 @@ def delete_task(task_id: str, response):
     except NotFound as e:
         response.status = hug.HTTP_NOT_FOUND
         return {'error': str(e)}
-    except:
+    except Exception:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return
+        return {'error': 'Unable to delete task.'}

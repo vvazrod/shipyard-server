@@ -25,12 +25,12 @@ def deploy_task(task_file, task: Task, node: Node):
             sftp.putfo(task_file,
                        f'/home/{node.ssh_user}/.shipyard/{task.name}.tar.gz')
 
-        ssh.exec_command(
-            f'tar -xzf /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz -C /home/{node.ssh_user}/.shipyard')
-        ssh.exec_command(
-            f'rm -f /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz')
         _, stdout, _ = ssh.exec_command(
-            f'docker build -t {task.name} /home/{node.ssh_user}/.shipyard/{task.name}')
+            f'mkdir -p /home/{node.ssh_user}/.shipyard/{task.name} && '
+            f'tar -xzf /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz -C /home/{node.ssh_user}/.shipyard/{task.name} && '
+            f'rm -f /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz && '
+            f'docker build -t {task.name} /home/{node.ssh_user}/.shipyard/{task.name}'
+        )
         while not stdout.channel.exit_status_ready():
             pass
 
@@ -38,4 +38,5 @@ def deploy_task(task_file, task: Task, node: Node):
             [f'--cap-add={cap}' for cap in task.capabilities]
         devices = [f'--device={dev}' for dev in task.devices]
         ssh.exec_command(
-            f'docker run -d {" ".join(capabilities)} {" ".join(devices)} --name={task.name} {task.name}')
+            f'docker run -d {" ".join(capabilities)} {" ".join(devices)} --name={task.name} {task.name}'
+        )

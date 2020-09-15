@@ -12,10 +12,14 @@ RUN pip install wheel \
     marshmallow-dataclass \
     pymongo \
     paramiko \
-    multipart
+    multipart \
+    docker
 
 # Copy app code
 COPY shipyard ./shipyard
+
+# Create mount point for SSH keys
+VOLUME [ "/root/.ssh" ]
 
 # The server listens on this port
 EXPOSE 8000

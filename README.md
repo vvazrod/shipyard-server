@@ -8,7 +8,7 @@ that the MongoDB host URL is provided in an environment variable called
 `DB_HOST`.
 
 You can also do a test deployment of the system with `docker-compose` using the
-following example configuration.
+following example configuration. Please note that this example uses your SSH configuration and keys.
 
 ```YAML
 version: "3.0"
@@ -20,6 +20,8 @@ services:
             - db
         environment:
             DB_HOST: ${DB_HOST}
+        volumes:
+            - ~/.ssh:/root/.ssh
         ports:
             - 8000:8000
 

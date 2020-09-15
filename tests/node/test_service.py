@@ -23,7 +23,7 @@ test_nodes = Node.Schema().load([
         'name': 'Test1',
         'ip': '1.1.1.1',
         'ssh_user': 'Test1',
-        'ssh_pass': 'Test1',
+        'cpu_cores': 4,
         'tasks': [],
         'devices': [
             '/dev/test1',
@@ -34,7 +34,7 @@ test_nodes = Node.Schema().load([
         'name': 'Test2',
         'ip': '2.2.2.2',
         'ssh_user': 'Test2',
-        'ssh_pass': 'Test2'
+        'cpu_cores': 1
     }
 ], many=True)
 test_tasks = Task.Schema().load([
@@ -69,23 +69,28 @@ test_tasks = Task.Schema().load([
 ], many=True)
 
 
-def mock_check_feasibility(tasks: List[Task]) -> bool:
+def mock_check_feasibility(tasks: List[Task], cpu_cores: int) -> bool:
     if tasks[-1].name == 'Test1':
         return True
     return False
+
+
+def mock_set_up_node(address: str, ssh_user: str, ssh_pass: str):
+    return
 
 
 def mock_deploy_task(task_file, task: Task, node: Node):
     return
 
 
-def mock_remove_task(task_nmae: str, node: Node):
+def mock_remove_task(task_name: str, node: Node):
     return
 
 
 @mock.patch('shipyard.node.service.db', mockdb)
 @mock.patch('shipyard.node.service.fs', mockfs)
 @mock.patch('shipyard.node.service.check_feasibility', mock_check_feasibility)
+@mock.patch('shipyard.node.service.set_up_node', mock_set_up_node)
 @mock.patch('shipyard.node.service.deploy_task', mock_deploy_task)
 @mock.patch('shipyard.node.service.remove_task', mock_remove_task)
 class TestService(unittest.TestCase):
@@ -127,7 +132,6 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.name, test_nodes[0].name)
         self.assertEqual(result.ip, test_nodes[0].ip)
         self.assertEqual(result.ssh_user, test_nodes[0].ssh_user)
-        self.assertEqual(result.ssh_pass, test_nodes[0].ssh_pass)
 
         with self.assertRaises(NotFound):
             result = NodeService.get_by_id(str(ObjectId()))
@@ -137,7 +141,6 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.name, test_nodes[0].name)
         self.assertEqual(result.ip, test_nodes[0].ip)
         self.assertEqual(result.ssh_user, test_nodes[0].ssh_user)
-        self.assertEqual(result.ssh_pass, test_nodes[0].ssh_pass)
 
         with self.assertRaises(NotFound):
             result = NodeService.get_by_name('error')
@@ -146,12 +149,11 @@ class TestService(unittest.TestCase):
         new_node = Node.Schema().load({
             'name': 'Test3',
             'ip': '3.3.3.3',
-            'ssh_user': 'Test3',
-            'ssh_pass': 'Test3'
+            'cpu_cores': 4
         })
 
         try:
-            result = NodeService.create(new_node)
+            result = NodeService.create(new_node, 'test', 'test')
             self.assertEqual(mockdb.nodes.count_documents({}),
                              len(test_nodes)+1)
             self.assertIsInstance(result, str)
@@ -159,7 +161,7 @@ class TestService(unittest.TestCase):
             self.fail()
 
         with self.assertRaises(AlreadyPresent):
-            NodeService.create(new_node)
+            NodeService.create(new_node, 'test', 'test')
         self.assertEqual(mockdb.nodes.count_documents({}), len(test_nodes)+1)
 
     def test_update(self):
@@ -168,7 +170,6 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.name, 'Updated')
         self.assertEqual(result.ip, test_nodes[0].ip)
         self.assertEqual(result.ssh_user, test_nodes[0].ssh_user)
-        self.assertEqual(result.ssh_pass, test_nodes[0].ssh_pass)
         self.assertEqual(result.devices, test_nodes[0].devices)
 
         with self.assertRaises(NotFound):
@@ -179,7 +180,6 @@ class TestService(unittest.TestCase):
         self.assertEqual(result.name, test_nodes[0].name)
         self.assertEqual(result.ip, test_nodes[0].ip)
         self.assertEqual(result.ssh_user, test_nodes[0].ssh_user)
-        self.assertEqual(result.ssh_pass, test_nodes[0].ssh_pass)
         self.assertEqual(mockdb.nodes.count_documents({}), len(test_nodes)-1)
 
         with self.assertRaises(NotFound):

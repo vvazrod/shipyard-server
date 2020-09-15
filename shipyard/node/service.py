@@ -9,6 +9,7 @@ from shipyard.db import db
 from shipyard.errors import NotFound, NotFeasible, MissingDevices, AlreadyPresent
 from shipyard.node.model import Node
 from shipyard.task.model import Task
+from shipyard.crane.set_up import set_up_node
 from shipyard.crane.feasibility import check_feasibility
 from shipyard.crane.deploy import deploy_task
 from shipyard.crane.remove import remove_task
@@ -53,7 +54,7 @@ class NodeService():
         return Node.Schema().load(result)
 
     @staticmethod
-    def create(new_node: Node) -> str:
+    def create(new_node: Node, ssh_user: str, ssh_pass: str) -> str:
         """
         Insert a new node into the database.
 
@@ -66,8 +67,14 @@ class NodeService():
         if result is not None:
             raise AlreadyPresent('A node already exists with the given name.')
 
-        new_id = db.nodes.insert_one(Node.Schema(
-            exclude=['_id']).dump(new_node)).inserted_id
+        set_up_node(new_node.ip, ssh_user, ssh_pass)
+
+        new_id = db.nodes.insert_one(
+            {
+                **Node.Schema(exclude=['_id']).dump(new_node),
+                'ssh_user': ssh_user
+            }
+        ).inserted_id
         return str(new_id)
 
     @staticmethod
@@ -86,7 +93,7 @@ class NodeService():
             raise NotFound('No node found with the given ID.')
         node = Node.Schema().load(node)
 
-        if any(k in new_values for k in ('devices', 'ssh_user', 'ssh_pass', 'ip')):
+        if any(k in new_values for k in ('devices', 'ssh_user', 'ip')):
             for task in node.tasks:
                 remove_task(task.name, node)
             new_values = {**new_values, 'tasks': []}
@@ -149,10 +156,10 @@ class NodeService():
 
         if not set(task.devices).issubset(set(node.devices)):
             raise MissingDevices(
-                'The target node doesn\'t have the needed devices for the task')
+                'The target node doesn\'t have the needed devices for the task'
+            )
 
-        new_taskset = node.tasks + [task]
-        if check_feasibility(new_taskset) is False:
+        if check_feasibility(node.tasks + [task], node.cpu_cores) is False:
             raise NotFeasible('The new taskset isn\'t feasible')
 
         with fs.get(task.file_id) as task_file:

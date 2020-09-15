@@ -1,3 +1,5 @@
+import base64
+
 import hug
 
 from bson.objectid import InvalidId
@@ -37,7 +39,7 @@ def get_node_list(response, name: str = None):
 
 
 @hug.post('/')
-def post_node(body, response):
+def post_node(request, body, response):
     """
     Create a new node resource.
 
@@ -49,8 +51,13 @@ def post_node(body, response):
     """
 
     try:
+        auth_header = request.get_header('AUTHORIZATION')
+        decoded_auth = base64.b64decode(auth_header.split()[1]).decode()
+        ssh_user, ssh_pass = decoded_auth.split(':')
+
         new_node = Node.Schema().load(body)
-        new_id = NodeService.create(new_node)
+
+        new_id = NodeService.create(new_node, ssh_user, ssh_pass)
         return {'_id': new_id}
     except ValidationError as e:
         response.status = hug.HTTP_BAD_REQUEST
@@ -58,9 +65,9 @@ def post_node(body, response):
     except AlreadyPresent as e:
         response.status = hug.HTTP_CONFLICT
         return {'error': str(e)}
-    except Exception:
+    except Exception as e:
         response.status = hug.HTTP_INTERNAL_SERVER_ERROR
-        return {'error': 'Unable to create node.'}
+        return {'error': 'Unable to create node.' + str(e)}
 
 
 @hug.get('/{node_id}')

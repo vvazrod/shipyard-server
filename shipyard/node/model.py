@@ -21,11 +21,10 @@ class Node:
     ip: str = field(metadata={'validate': validate_ip})
     cpu: Optional[str] = field(metadata={'required': False})
     cpu_arch: Optional[str] = field(metadata={'required': False})
-    cpu_cores: Optional[int] = field(metadata={'required': False})
+    cpu_cores: int
     cpu_freq: Optional[int] = field(metadata={'required': False})
     ram: Optional[int] = field(metadata={'required': False})
-    ssh_user: str
-    ssh_pass: str
+    ssh_user: Optional[str] = field(metadata={'required': False})
     devices: List[str] = field(default_factory=lambda: [], metadata={
         'required': False,
         'validate': validate_devices

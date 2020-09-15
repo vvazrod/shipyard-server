@@ -1,4 +1,5 @@
 import unittest
+import base64
 
 import hug
 
@@ -18,14 +19,14 @@ test_nodes = Node.Schema().load([
         'name': 'Test1',
         'ip': '1.1.1.1',
         'ssh_user': 'Test1',
-        'ssh_pass': 'Test1'
+        'cpu_cores': 4
     },
     {
         '_id': str(ObjectId()),
         'name': 'Test2',
         'ip': '2.2.2.2',
         'ssh_user': 'Test2',
-        'ssh_pass': 'Test2'
+        'cpu_cores': 1
     }
 ], many=True)
 
@@ -53,7 +54,7 @@ class MockService():
         raise NotFound
 
     @staticmethod
-    def create(new_node: Node) -> str:
+    def create(new_node: Node, ssh_user: str, ssh_pass: str) -> str:
         for node in test_nodes:
             if new_node.name == node.name:
                 raise AlreadyPresent
@@ -121,26 +122,47 @@ class TestControllers(unittest.TestCase):
         self.assertIsNotNone(response.data)
 
     def test_post_node(self):
-        response = hug.test.call('POST', controllers, '', body={
-            'name': 'Test3',
-            'ip': '3.3.3.3',
-            'ssh_user': 'Test3',
-            'ssh_pass': 'Test3'
-        })
+        response = hug.test.call(
+            'POST',
+            controllers,
+            '',
+            body={
+                'name': 'Test3',
+                'ip': '3.3.3.3',
+                'cpu_cores': 1
+            },
+            headers={
+                'AUTHORIZATION': f'Basic {base64.b64encode(b"test:test").decode()}'
+            }
+        )
         self.assertEqual(response.status, hug.HTTP_OK)
         self.assertIsNotNone(response.data)
         self.assertIsInstance(response.data['_id'], str)
 
-        response = hug.test.call('POST', controllers, '', body={
-            'name': 'Test3',
-            'ssh_user': 'Test3',
-            'ssh_pass': 'Test3'
-        })
+        response = hug.test.call(
+            'POST',
+            controllers,
+            '',
+            body={
+                'name': 'Test3',
+                'ip': '3.3.3.3'
+            },
+            headers={
+                'AUTHORIZATION': f'Basic {base64.b64encode(b"test:test").decode()}'
+            }
+        )
         self.assertEqual(response.status, hug.HTTP_BAD_REQUEST)
         self.assertIsNotNone(response.data)
 
-        response = hug.test.call('POST', controllers, '', body=Node.Schema(
-            exclude=['_id']).dump(test_nodes[0]))
+        response = hug.test.call(
+            'POST',
+            controllers,
+            '',
+            body=Node.Schema(exclude=['_id']).dump(test_nodes[0]),
+            headers={
+                'AUTHORIZATION': f'Basic {base64.b64encode(b"test:test").decode()}'
+            }
+        )
         self.assertEqual(response.status, hug.HTTP_CONFLICT)
         self.assertIsNotNone(response.data)
         self.assertIsInstance(response.data['error'], str)

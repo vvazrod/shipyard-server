@@ -1,4 +1,4 @@
-import paramiko
+import docker
 
 from shipyard.node.model import Node
 from shipyard.node.model import Task
@@ -8,35 +8,31 @@ def deploy_task(task_file, task: Task, node: Node):
     """
     Sends a task to a certain node and makes it run.
 
-    The given task file  is a `tar.gz` file containing the task's image and all
+    The given task file is a `tar.gz` file containing the task's image and all
     the needed source files to build it.
 
-    This function connects to the target node by SSH, sends the file,
-    decompresses it, builds the image and runs the container. The original file
-    is removed from the node after the fact and only the image and source files
-    remain.
+    This function connects to the node's Docker server by SSH, builds the image
+    using the custom context contained in the tar gile and then runs the
+    container.
     """
 
-    with paramiko.SSHClient() as ssh:
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-        ssh.connect(node.ip, username=node.ssh_user, password=node.ssh_pass)
-
-        with ssh.open_sftp() as sftp:
-            sftp.putfo(task_file,
-                       f'/home/{node.ssh_user}/.shipyard/{task.name}.tar.gz')
-
-        _, stdout, _ = ssh.exec_command(
-            f'mkdir -p /home/{node.ssh_user}/.shipyard/{task.name} && '
-            f'tar -xzf /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz -C /home/{node.ssh_user}/.shipyard/{task.name} && '
-            f'rm -f /home/{node.ssh_user}/.shipyard/{task.name}.tar.gz && '
-            f'docker build -t {task.name} /home/{node.ssh_user}/.shipyard/{task.name}'
-        )
-        while not stdout.channel.exit_status_ready():
-            pass
-
-        capabilities = ['--cap-add=sys_nice'] + \
-            [f'--cap-add={cap}' for cap in task.capabilities]
-        devices = [f'--device={dev}' for dev in task.devices]
-        ssh.exec_command(
-            f'docker run -d {" ".join(capabilities)} {" ".join(devices)} --name={task.name} {task.name}'
-        )
+    client = docker.DockerClient(base_url=f'ssh://{node.ssh_user}@{node.ip}')
+    client.images.build(
+        tag=task.name,
+        fileobj=task_file,
+        custom_context=True,
+        encoding='gzip'
+    )
+    client.containers.run(
+        task.name,
+        name=task.name,
+        detach=True,
+        cap_add=['SYS_NICE'] + task.capabilities,
+        devices=task.devices,
+        environment={
+            'TASK_RUNTIME': task.runtime,
+            'TASK_DEADLINE': task.deadline,
+            'TASK_PERIOD': task.period
+        }
+    )
+    client.close()

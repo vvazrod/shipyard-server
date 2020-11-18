@@ -1,3 +1,7 @@
+"""
+Node set up logic.
+"""
+
 import os
 
 import paramiko

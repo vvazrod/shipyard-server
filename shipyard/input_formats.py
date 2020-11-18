@@ -1,9 +1,15 @@
+"""
+Custom hug input formats.
+"""
+
 from hug.format import content_type
 from multipart import MultipartParser
 
 
 @content_type('multipart/form-data')
 def multipart(body, **header_params):
+    """Format for multipart requests."""
+
     if header_params and 'boundary' in header_params:
         if type(header_params['boundary']) is str:
             header_params['boundary'] = header_params['boundary'].encode()

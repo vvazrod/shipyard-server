@@ -1,13 +1,15 @@
+"""
+The node model.
+"""
+
 from dataclasses import field
-from typing import List, Optional, ClassVar, Type
+from typing import ClassVar, List, Optional, Type
 
 from marshmallow import Schema
-from marshmallow_dataclass import dataclass, NewType
-
+from marshmallow_dataclass import NewType, dataclass
 from shipyard.fields import ObjectId
-from shipyard.validators import validate_devices, validate_ip
 from shipyard.task.model import Task
-
+from shipyard.validators import validate_devices, validate_ip
 
 objectid = NewType('objectid', str, ObjectId)
 

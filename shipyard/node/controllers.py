@@ -1,13 +1,16 @@
+"""
+API controllers for node related operations.
+"""
+
 import base64
 
 import hug
-
 from bson.objectid import InvalidId
 from marshmallow import ValidationError
-
-from shipyard.errors import NotFound, NotFeasible, MissingDevices, AlreadyPresent
-from shipyard.node.service import NodeService
+from shipyard.errors import (AlreadyPresent, MissingDevices, NotFeasible,
+                             NotFound)
 from shipyard.node.model import Node
+from shipyard.node.service import NodeService
 
 
 @hug.get('/')

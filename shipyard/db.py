@@ -1,4 +1,9 @@
+"""
+Database connection.
+"""
+
 import os
+
 import pymongo
 
 dbhost = os.getenv('DB_HOST', default='localhost')

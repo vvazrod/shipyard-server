@@ -1,17 +1,18 @@
-import gridfs
+"""
+Business logic for task related operations.
+"""
 
-from typing import List
 from io import BytesIO
+from typing import List
 
+import gridfs
 from bson.objectid import ObjectId
 from pymongo import ReturnDocument
-
+from shipyard.crane.remove import remove_task
 from shipyard.db import db
 from shipyard.errors import AlreadyPresent, NotFound
-from shipyard.task.model import Task
 from shipyard.node.model import Node
-from shipyard.crane.remove import remove_task
-
+from shipyard.task.model import Task
 
 fs = gridfs.GridFS(db)
 

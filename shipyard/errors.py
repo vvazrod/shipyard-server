@@ -1,3 +1,8 @@
+"""
+Custom errors.
+"""
+
+
 class NotFound(Exception):
     """Error used when no object is found."""
 

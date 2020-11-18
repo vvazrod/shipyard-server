@@ -1,19 +1,21 @@
-import gridfs
+"""
+Business logic for node related operations.
+"""
 
 from typing import List
 
+import gridfs
 from bson.objectid import ObjectId
 from pymongo import ReturnDocument
-
+from shipyard.crane.deploy import deploy_task
+from shipyard.crane.feasibility import check_feasibility
+from shipyard.crane.remove import remove_task
+from shipyard.crane.set_up import set_up_node
 from shipyard.db import db
-from shipyard.errors import NotFound, NotFeasible, MissingDevices, AlreadyPresent
+from shipyard.errors import (AlreadyPresent, MissingDevices, NotFeasible,
+                             NotFound)
 from shipyard.node.model import Node
 from shipyard.task.model import Task
-from shipyard.crane.set_up import set_up_node
-from shipyard.crane.feasibility import check_feasibility
-from shipyard.crane.deploy import deploy_task
-from shipyard.crane.remove import remove_task
-
 
 fs = gridfs.GridFS(db)
 

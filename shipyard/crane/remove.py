@@ -1,5 +1,8 @@
-import docker
+"""
+Task removal logic.
+"""
 
+import docker
 from shipyard.node.model import Node
 
 

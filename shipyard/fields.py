@@ -1,9 +1,13 @@
-import bson
+"""
+Custom marshmallow fields.
+"""
 
-from marshmallow import fields, ValidationError
+import bson
+from marshmallow import ValidationError, fields
 
 
 class ObjectId(fields.Field):
+    """A MongoDB object ID."""
 
     def _serialize(self, value, attr, obj, **kwargs):
         if value is None:

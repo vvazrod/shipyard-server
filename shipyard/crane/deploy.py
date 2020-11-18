@@ -1,7 +1,9 @@
-import docker
+"""
+Task deployment logic.
+"""
 
-from shipyard.node.model import Node
-from shipyard.node.model import Task
+import docker
+from shipyard.node.model import Node, Task
 
 
 def deploy_task(task_file, task: Task, node: Node):

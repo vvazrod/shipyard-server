@@ -1,3 +1,7 @@
+"""
+The server's entrypoint.
+"""
+
 import hug
 
 from shipyard.input_formats import multipart

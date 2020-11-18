@@ -1,16 +1,18 @@
+"""
+API controllers for task related operations.
+"""
+
+import ast
+import io
 import json
 import tarfile
-import io
-import ast
 
 import hug
-
 from bson.objectid import InvalidId
 from marshmallow import ValidationError
-
 from shipyard.errors import AlreadyPresent, NotFound
-from shipyard.task.service import TaskService
 from shipyard.task.model import Task
+from shipyard.task.service import TaskService
 
 
 @hug.get('/')

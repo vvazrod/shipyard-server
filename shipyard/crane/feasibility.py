@@ -1,3 +1,7 @@
+"""
+Feasibility checking algorithm.
+"""
+
 from typing import List
 
 from shipyard.task.model import Task
